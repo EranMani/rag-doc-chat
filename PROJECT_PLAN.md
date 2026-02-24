@@ -1,68 +1,93 @@
 # rag-doc-chat — Roadmap / Application Plan
 
+**In a nutshell:** Upload documents (PDF, CSV, TXT, MD) → get a short summary → chat with the model about your docs and see source citations. Built with LangChain, Chroma, and Gradio.
+
+---
+
+## Table of contents
+
+| Section | Contents |
+|---------|----------|
+| [1. Goal & scope](#1-goal--scope) | What we're building, definition of done, out of scope, audience |
+| [2. User flow](#2-user-flow) | Steps the user takes and what the system does |
+| [3. Tech stack & constraints](#3-tech-stack--constraints) | Framework, infrastructure, and non-negotiables |
+| [4. Architecture](#4-architecture-high-level) | Ingest path, query path, document summary, shared concerns |
+| [5. Build order / phases](#5-build-order--phases) | Implementation order and outcomes per phase |
+| [6. Open questions / risks](#6-open-questions--risks) | Decisions to make and risks with mitigations |
+
+---
+
 ## 1. Goal & scope
-- What we're building: A demo application of RAG system where the user can upload files, get summary and ask questions about them
-- What "done" looks like: Upload -> short summary + chat + gradio UI with source citations
-- Out of scope: Multi-user or multi-tenant isolation, LangSmith / full eval harness (RAGAS, TruLens)
-- Audience: Me (during build) and future viewers (developers, interviewrs)
+
+- **What we're building:** A RAG demo where the user uploads files, gets a summary, and asks questions about them.
+- **What "done" looks like:** Upload → short summary + chat + Gradio UI with source citations.
+- **Out of scope:** Multi-user or multi-tenant isolation; LangSmith / full eval harness (RAGAS, TruLens).
+- **Audience:** Me (during build) and future viewers (developers, interviewers).
 
 ## 2. User flow
-- Open application
-- Upload a document: load document (by type: PDF, CSV, TXT, MD) -> create chunks from document -> embed chunks (create vectors for them) -> store them in a persistent Chroma -> add metadata (date, embedding model version, parent document name)
-- Display short summary on the left view
-- Show the source citations on the right view
-- Ask a question
-- Get a response from the model
+
+1. Open application.
+2. **Upload a document:** load (by type: PDF, CSV, TXT, MD) → chunk → embed → store in persistent Chroma + metadata (date, embedding model version, parent document name).
+3. Display short summary on the left view.
+4. Ask a question → get a response from the model.
+5. Show source citations on the right view.
 
 ## 3. Tech stack & constraints
-### TECH STACK
-- Langchain framework, using abstraction layers such as langchain chroma, text splitters, community tools for faster iterations 
-- Chroma for persisted vector store
-- all-MiniLM-L6-v2 as the embedding model using the langchain huggingface library
-- GPT-5 mini as the chat model
 
-### CONSTRAINTS
-- Gradio for UI so we can demo without a separate frontend
-- Same embedding model for ingestion and query
-- API keys, model names and chunking/tuning params only in config or env (no hardcoding!)
+### Tech stack
+
+- **Framework:** LangChain (langchain-chroma, langchain-text-splitters, langchain-community, etc.) for loaders, embeddings, vector store, and LLM.
+- **Vector store:** Chroma (persisted on disk).
+- **Embedding model:** all-MiniLM-L6-v2 (via langchain-huggingface).
+- **Chat model:** GPT-4o-mini or equivalent (cloud).
+
+### Constraints
+
+- Gradio for UI so we can demo without a separate frontend.
+- Same embedding model for ingestion and query (Golden Rule).
+- API keys, model names, and chunking/tuning params only in config or env — no hardcoding.
 
 ## 4. Architecture (high-level)
-- Ingest path: load -> chunk -> embed -> store in chroma + metadata
-- Query path: question -> embed question -> search chroma (retriever) -> get chunks -> build prompt (context +question) -> call model -> return answer + source citations
-- Why use different paths for ingest and query? each has different responsibilities, separate dependencies for easier debugging and scaling
-- Same embedding model for both chunks and query is more maintainable and easier to swap
-- After chunks are created and stored, we call the LLM with a bounded excerpt of chunks to produce a short summary. This runs in the ingest path and is shown in the UI
-- Response to user will happen after compiling chunk context + question into single system prompt for the model
+
+### Ingest path (write)
+
+`load document → chunk → embed → store in Chroma` (+ metadata). After storing, call the LLM with a bounded excerpt of chunks to produce a short summary; show it in the UI.
+
+### Query path (read)
+
+`question → embed question → search Chroma (retriever) → get chunks → build prompt (context + question) → call model → return answer + source citations`.
+
+### Why separate ingest and query?
+
+Different responsibilities; separate dependencies for easier debugging and scaling. Ingest writes; query only reads. Same embedding model for both paths is required and makes swapping models easier.
 
 ## 5. Build order / phases
-- general approach: env -> config -> ingest -> ui -> query 
-- Phase 1: Create the code environment using uv and venv. Use .env file for the API keys.
-By the end: establish the required environment to run the application
-- Phase 2: Create the config file that includes constants for model names (both local and from cloud), chunks tuning
-By the end: A config file that will be used by both ingest and query / answer
-- Phase 3: Create the ingest file, which will handle the document loading -> chunking -> embedding -> store in Chroma -> short summary
-By the end: A file with main function that will receive the uploaded document -> chunk it -> embed it -> stores in chroma -> return a summary
-- Phase 4: Create the UI file which will run the gradio UI -> upload document -> show processing labels -> inject summary into the left view
-By the end: A file with gradio app where the user can upload and see the summary on the left side view
-- Phase 5: Create the answer file, which will embed the user query -> retrieve from Chroma -> find relevant chunks -> compile system prompt with context + question -> update UI with response
-By the end: An option for the user to ask a question and see answer + source citations
-- Phase 6: Handling edge cases, such as empty retrieval, document type validation on upload, no empty chunks, basic tests
-By the end: A file that will run few tests to find edge cases and improve maintainability
+
+**Approach:** `env → config → ingest → UI → query → harden`
+
+| Phase | What to do | By the end |
+|-------|------------|------------|
+| **1** | Create code environment (uv/venv). Use `.env` for API keys. | Environment ready to run the application. |
+| **2** | Create config file: model names (local + cloud), chunk tuning. | One config used by both ingest and query. |
+| **3** | Create ingest module: load → chunk → embed → store in Chroma → short summary. | Function that takes an uploaded document, chunks it, embeds it, stores in Chroma, returns summary. |
+| **4** | Create UI: Gradio app, upload document, processing labels, summary on left view. | User can upload and see summary on the left. |
+| **5** | Create answer module: embed query → retrieve from Chroma → build prompt (context + question) → call model → update UI. | User can ask a question and see answer + source citations. |
+| **6** | Edge cases: empty retrieval, document type validation, no empty chunks, basic tests. | Tests and handling for edge cases; better maintainability. |
 
 ## 6. Open questions / risks
-### OPEN QUESTIONS
-- I need to check the context window limit of the model, to understand the amount of text I can send him for the document summary process
-- I need to figure out the values for chunk size and overlap. this will require testing the retrievel quality before I decide
-- What happens when a user upload multiple files that are different types? I need to prepare a loader that can handle each type of file
-- Should I use local model for the summary and gpt-5-nano/mini for answering the user?
-- I need to understand the amount of tokens per process according to a fixed budget
 
-### RISKS
-- User may ask a question while having an empty vector store
-Mitigation: Check if Chroma has documents. if not, show the upload button or tell the user that he needs to first upload a document in order to continue
-- Optimize system prompt through a long conversation. I need to decide when to perform a history summary in order to reduce the history window
-Mitigation: Create a variable in config file to keep the last N turns in the prompt. When the limit reached, perform a summary on the older messages
-- Rate limits issues. User can upload very large files, or ask very long questions. How can I handle that?
-Mitigation: Validate file types on upload against a predefined max size. When user provides a long question, truncate it. Show clear API and rate limit errors to the user for good UX
+### Open questions
 
+- **Context window:** Check the model's context limit to decide how much text to send for the document summary.
+- **Chunk size and overlap:** Decide via testing retrieval quality.
+- **Multiple file types:** Prepare a loader per type (PDF, CSV, TXT, MD); dispatch by extension.
+- **Local vs cloud:** Use local model for summary and GPT-4o-mini for answers, or same model for both?
+- **Token budget:** Understand tokens per process to stay within a fixed budget.
 
+### Risks and mitigations
+
+| Risk | Mitigation |
+|------|------------|
+| User asks a question with an empty vector store | Check if Chroma has documents; if not, show upload prompt or "Upload a document first." |
+| Long conversation blows up context window | Config: keep last N turns in the prompt; when limit reached, summarize older messages. |
+| Rate limits; very large files or long questions | Validate file type and max size on upload. Truncate long questions. Show clear API/rate-limit errors. |
