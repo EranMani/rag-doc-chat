@@ -6,7 +6,6 @@ Get the extension of the file and return the appropriate loader
 """
 
 import tempfile
-from fileinput import filename
 from pathlib import Path
 
 from langchain_core.documents import Document
