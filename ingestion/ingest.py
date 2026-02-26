@@ -9,15 +9,13 @@ It will create a short summary on amount of chunks and return it to the user
 load -> chunk -> embed & store -> summarize -> return summary
 """
 
-import chromadb
 from .loaders import load_document
+from .summary import generate_summary
 from src.config import (
-    EMBEDDING_MODEL, CHAT_MODEL, SUMMARY_MODEL,
-    CHUNK_SIZE, CHUNK_OVERLAP, CHROMA_PERSIST_DIR
+    EMBEDDING_MODEL, CHUNK_SIZE, CHUNK_OVERLAP, CHROMA_PERSIST_DIR  
 )
 from langchain_chroma import Chroma
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_openai import ChatOpenAI
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_chroma import Chroma
 from datetime import datetime
@@ -59,7 +57,15 @@ def embed_and_store_chunks(document_chunks):
     chroma_db.add_documents(document_chunks)
     print(f"Added {len(document_chunks)} chunks to ChromaDB")
 
-    
+def build_chunks_content_for_summary(document_chunks):
+    """
+    Build the content of the document chunks for the summary.
+    Use N amount of chunks to build the summary.
+    """
+
+    excerpt = "\n\n".join(chunk.page_content for chunk in document_chunks[:5])
+    return excerpt
+
 def ingest_document(file_path=None, file_bytes=None, filename=None):
     """
     Ingest a document into the RAG system.
@@ -74,5 +80,10 @@ def ingest_document(file_path=None, file_bytes=None, filename=None):
     
     # Embed and store the chunks in ChromaDB
     embed_and_store_chunks(document_chunks)
-    
+
+    # Generate a summary of the document based on its chunks
+    summary_content = build_chunks_content_for_summary(document_chunks)
+    summary = generate_summary(summary_content)
+    print(f"Summary: {summary}")
+
     return document
