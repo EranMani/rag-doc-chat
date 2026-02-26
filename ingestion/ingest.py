@@ -21,7 +21,7 @@ from langchain_chroma import Chroma
 from datetime import datetime
 from pathlib import Path
 
-def split_document_to_chunks(filename: str, document):
+def _split_document_to_chunks(filename: str, document):
     """
     Chunk a list of langchain documents into smaller chunks.
     """
@@ -38,7 +38,7 @@ def split_document_to_chunks(filename: str, document):
 
     return chunk_document
 
-def embed_and_store_chunks(document_chunks):
+def _embed_and_store_chunks(document_chunks):
     """
     Embed and store a list of document chunks in ChromaDB.
     """
@@ -57,7 +57,7 @@ def embed_and_store_chunks(document_chunks):
     chroma_db.add_documents(document_chunks)
     print(f"Added {len(document_chunks)} chunks to ChromaDB")
 
-def build_chunks_content_for_summary(document_chunks):
+def _build_chunks_content_for_summary(document_chunks):
     """
     Build the content of the document chunks for the summary.
     Use N amount of chunks to build the summary.
@@ -76,13 +76,13 @@ def ingest_document(file_path=None, file_bytes=None, filename=None):
     print(f"Loaded {len(document)} documents")
 
     # Chunk the document into smaller chunks
-    document_chunks = split_document_to_chunks(filename, document)
+    document_chunks = _split_document_to_chunks(filename, document)
     
     # Embed and store the chunks in ChromaDB
-    embed_and_store_chunks(document_chunks)
+    _embed_and_store_chunks(document_chunks)
 
     # Generate a summary of the document based on its chunks
-    summary_content = build_chunks_content_for_summary(document_chunks)
+    summary_content = _build_chunks_content_for_summary(document_chunks)
     summary = generate_summary(summary_content)
     print(f"Summary: {summary}")
 
