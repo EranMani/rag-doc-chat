@@ -23,26 +23,29 @@ from langchain_chroma import Chroma
 from datetime import datetime
 from pathlib import Path
 
-
-def ingest_document(file_path=None, file_bytes=None, filename=None):
+def split_document_to_chunks(filename: str, document):
     """
-    Ingest a document into the RAG system.
+    Chunk a list of langchain documents into smaller chunks.
     """
-
-    documents = load_document(file_path=file_path, file_bytes=file_bytes, filename=filename)
-    print(f"Loaded {len(documents)} documents")
 
     # RecursiveCharacterTextSplitter splits text by trying separators in order (\n\n, \n, ". ", " ", then char)
     # split_documents takes a list of LangChain Documents, splits each page_content, keeps metadata on every resulting chunk, and returns one flat list of chunk Documents.
-    chunk_documents = RecursiveCharacterTextSplitter(chunk_size=CHUNK_SIZE, chunk_overlap=CHUNK_OVERLAP).split_documents(documents)
+    chunk_document = RecursiveCharacterTextSplitter(chunk_size=CHUNK_SIZE, chunk_overlap=CHUNK_OVERLAP).split_documents(document)
 
-    print(f"Chunked {len(chunk_documents)} documents")
-    for chunk in chunk_documents:
+    print(f"Chunked {len(chunk_document)} documents")
+    for chunk in chunk_document:
         chunk.metadata["embedding_model"] = EMBEDDING_MODEL
         chunk.metadata["parent_document"] = filename
         chunk.metadata["date"] = datetime.now().strftime("%Y-%m-%d")
-        print(chunk.metadata)
 
+    return chunk_document
+
+def embed_and_store_chunks(document_chunks):
+    """
+    Embed and store a list of document chunks in ChromaDB.
+    """
+
+    # Use HuggingFaceEmbeddings to embed the document chunks
     embeddings = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
 
     if not Path(CHROMA_PERSIST_DIR).exists():
@@ -50,12 +53,26 @@ def ingest_document(file_path=None, file_bytes=None, filename=None):
         chroma_db = Chroma(persist_directory=CHROMA_PERSIST_DIR, embedding_function=embeddings)
     else:
         # Load the existing ChromaDB database
-        chroma_db = Chroma.from_documents(documents=chunk_documents, embedding=embeddings, persist_directory=CHROMA_PERSIST_DIR)
+        chroma_db = Chroma.from_documents(documents=document_chunks, embedding=embeddings, persist_directory=CHROMA_PERSIST_DIR)
 
     # Add the generated chunks to the ChromaDB database
-    chroma_db.add_documents(chunk_documents)
+    chroma_db.add_documents(document_chunks)
+    print(f"Added {len(document_chunks)} chunks to ChromaDB")
 
-    print(f"Added {len(chunk_documents)} chunks to ChromaDB")
     
+def ingest_document(file_path=None, file_bytes=None, filename=None):
+    """
+    Ingest a document into the RAG system.
+    """
 
-    return documents
+    # Turn user document into a list of langchain documents
+    document = load_document(file_path=file_path, file_bytes=file_bytes, filename=filename)
+    print(f"Loaded {len(document)} documents")
+
+    # Chunk the document into smaller chunks
+    document_chunks = split_document_to_chunks(filename, document)
+    
+    # Embed and store the chunks in ChromaDB
+    embed_and_store_chunks(document_chunks)
+    
+    return document
