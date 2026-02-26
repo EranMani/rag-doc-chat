@@ -27,3 +27,8 @@ CHUNK_OVERLAP = 100
 SUMMARY_MODEL = "gpt-5-mini"
 RETRIEVAL_K = 5
 SCORE_THRESHOLD = 0.75
+
+# Define the system prompt for the summary model
+SUMMARY_SYSTEM_PROMPT = """
+You are a helpful assistant. Summarize the following document in 2-3 sentences. Say what the document is about and its main points. Be concise.
+"""
