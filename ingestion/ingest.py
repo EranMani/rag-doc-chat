@@ -46,17 +46,19 @@ def _embed_and_store_chunks(document_chunks):
     # Use HuggingFaceEmbeddings to embed the document chunks
     embeddings = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
 
-    if not Path(CHROMA_PERSIST_DIR).exists():
-        # Create a new ChromaDB database
+    if Path(CHROMA_PERSIST_DIR).exists():
+        # Load existing Chroma DB
         chroma_db = Chroma(persist_directory=CHROMA_PERSIST_DIR, embedding_function=embeddings)
+
+        # Add the generated chunks to the existing ChromaDB database
+        chroma_db.add_documents(document_chunks)
     else:
-        # Load the existing ChromaDB database
+        # Add the generated chunks to a new ChromeDB database
         chroma_db = Chroma.from_documents(documents=document_chunks, embedding=embeddings, persist_directory=CHROMA_PERSIST_DIR)
 
-    # Add the generated chunks to the ChromaDB database
-    chroma_db.add_documents(document_chunks)
     print(f"Added {len(document_chunks)} chunks to ChromaDB")
 
+    
 def _build_chunks_content_for_summary(document_chunks):
     """
     Build the content of the document chunks for the summary.
@@ -86,4 +88,4 @@ def ingest_document(file_path=None, file_bytes=None, filename=None):
     summary = generate_summary(summary_content)
     print(f"Summary: {summary}")
 
-    return document
+    return summary
