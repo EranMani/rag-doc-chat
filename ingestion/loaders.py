@@ -2,7 +2,7 @@
 This file contains the loaders for the different file types
 Load a single document (PDF, CSV, TXT, MD) into LangChain Documents with metadata.
 
-Get the extension of the file and return the appropriate loader
+Get user document -> pick loader by extension -> load() -> attach metadata -> return list of Document objects
 """
 
 import tempfile
@@ -47,7 +47,9 @@ def load_document(*, file_path: str | None = None, file_bytes: bytes | None = No
     elif file_path is None:
         raise ValueError("Either file_bytes or file_path must be provided")
 
+    # The loader turns a user-uploaded file into a list of langchain Document objects
     loader = _get_loader(file_path=file_path, ext=ext)
+    # Trigger the loader to read the file and return a list of Document objects
     raw_docs = loader.load()
 
     # Attach metadata so ingest and query can use it as the source type for citations / filtering
