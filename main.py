@@ -1,5 +1,4 @@
-from ingestion.loaders import load_document
-from ingestion.ingest import ingest_document
+from ingestion import ingest_document
 from pathlib import Path
 
 working_dir = Path(__file__).resolve().parent
