@@ -25,7 +25,7 @@ CHUNK_OVERLAP = 100
 
 # Define constants for the document summary parameters
 SUMMARY_MODEL = "gpt-5-mini"
-RETRIEVAL_K = 5
+RETRIEVAL_K = 30
 SCORE_THRESHOLD = 0.75
 
 # Define the system prompt for the summary model
@@ -38,4 +38,5 @@ Do not wrap your response in code fences."""
 RAG_SYSTEM_PROMPT = """
 You are a helpful assistant that can answer questions about the following document:
 {document_summary}
+If the question is not related to the document, say so.
 """
