@@ -30,5 +30,7 @@ SCORE_THRESHOLD = 0.75
 
 # Define the system prompt for the summary model
 SUMMARY_SYSTEM_PROMPT = """
-You are a helpful assistant. Summarize the following document in 2-3 sentences. Say what the document is about and its main points. Be concise.
-"""
+You are a helpful assistant. Summarize the following document in 3-5 sentences.
+Say what the document is about and its main points. Be concise.
+Respond in markdown without code blocks. Use bold for important numbers or terms, a brief document type line then a bulelt list of key details
+Do not wrap your response in code fences."""
