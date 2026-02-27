@@ -19,6 +19,15 @@ def process_document_upload(file):
     except Exception as e:
         yield 100, f"Error processing file: {e}"
 
+def answer_question(history, question):
+    if not question:
+        return (history, "")
+    user_msg = {"role": "user", "content": [{"type": "text", "text": question}]}
+    assistant_msg = {"role": "assistant", "content": [{"type": "text", "text": "blabla"}]}
+
+    new_history = history + [user_msg, assistant_msg]
+    return new_history, ""
+
 
 # Create a gradio interface with a custom layout using Blocks
 with gr.Blocks(title="RAG Doc Chat") as demo:
@@ -39,9 +48,14 @@ with gr.Blocks(title="RAG Doc Chat") as demo:
         with gr.Column():
             gr.Markdown("## Chat (Phase 5)")
             gr.Markdown("Ask questions about your documents here.")
+            chatbot = gr.Chatbot(label="Chat", value=[])
+            answer_textbox = gr.Textbox(label="Question", placeholder="What is this document about?", lines=2)
+            ask_btn = gr.Button("Ask")
+            gr.Markdown("Sources")
 
     # wires the process button to logic
     process_btn.click(fn=process_document_upload, inputs=file_input, outputs=[progress_bar, summary_out])
+    ask_btn.click(fn=answer_question, inputs=[chatbot, answer_textbox], outputs=[chatbot, answer_textbox])
 
 demo.queue()
 demo.launch()
