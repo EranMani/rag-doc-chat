@@ -22,3 +22,22 @@ def generate_summary(document_chunks):
 
     response = client.invoke(messages)
     return response.content
+
+def generate_summary_stream(document_chunks: str):
+    """
+    Stream the summary token-by-token; yields cumulative text so the UI can update as it arrives.
+    """
+    client = ChatOpenAI(model=SUMMARY_MODEL, temperature=0)
+    messages = [
+        SystemMessage(content=SUMMARY_SYSTEM_PROMPT),
+        HumanMessage(content=document_chunks)
+    ]
+    summary = ""
+    for chunk in client.stream(messages):
+        # Stream chunks may not always have .content (e.g. role-only or tool-call chunks);
+        # getattr avoids AttributeError and skips non-content chunks.
+        if getattr(chunk, "content", None):
+            # Yield cumulative text so far; Gradio treats this generator as "streaming"
+            # and redraws the output with each yield, showing the summary as it grows.
+            summary += chunk.content
+            yield summary
