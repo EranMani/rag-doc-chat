@@ -10,7 +10,7 @@ load -> chunk -> embed & store -> summarize -> return summary
 """
 
 from .loaders import load_document
-from .summary import generate_summary
+from .summary import generate_summary, generate_summary_stream
 from src.config import (
     EMBEDDING_MODEL, CHUNK_SIZE, CHUNK_OVERLAP, CHROMA_PERSIST_DIR  
 )
@@ -89,3 +89,31 @@ def ingest_document(file_path=None, file_bytes=None, filename=None):
     print(f"Summary: {summary}")
 
     return summary
+
+def ingest_document_stream(file_path=None, file_bytes=None, filename=None):
+    """ 
+    Ingest a document into the RAG system and stream the summary.
+    Yields (progress, summary_text) so the UI can show progress and updating markdown.
+    """
+    # Turn user document into a list of langchain documents
+    document = load_document(file_path=file_path, file_bytes=file_bytes, filename=filename)
+    print(f"Loaded {len(document)} documents")
+
+    # Chunk the document into smaller chunks
+    document_chunks = _split_document_to_chunks(filename, document)
+    
+    # Embed and store the chunks in ChromaDB
+    _embed_and_store_chunks(document_chunks)
+
+    # Generate a summary of the document based on its chunks
+    summary_content = _build_chunks_content_for_summary(document_chunks)
+
+    # generate_summary_stream is a generator; each yield is cumulative summary text.
+    # Yield (95, summary) so Gradio gets (progress_bar_value, markdown_content).
+    # 95 = "summary phase"; UI jumps to 95% when streaming starts.
+    for summary in generate_summary_stream(summary_content):
+        yield 70, summary
+
+    # Final yield: 100% signals completion and sets the final summary (avoids UI flicker).
+    yield 100, summary
+    
