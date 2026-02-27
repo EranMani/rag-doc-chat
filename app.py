@@ -1,6 +1,6 @@
 import gradio as gr
 from pathlib import Path
-from ingestion import ingest_document
+from ingestion import ingest_document_stream
 import time
 
 def process_document_upload(file):
@@ -12,8 +12,8 @@ def process_document_upload(file):
     filename = Path(path).name
     yield 10, "⏳ Loading and processing document..."
     try:
-        summary = ingest_document(file_path=path, filename=filename)
-        yield 100, summary if summary else "No summary available"
+        for progress, text in ingest_document_stream(file_path=path, filename=filename):
+            yield progress, text
     except ValueError as e:
         yield 100, f"Invalid file format: {e}"
     except Exception as e:
@@ -35,7 +35,7 @@ with gr.Blocks(title="RAG Doc Chat") as demo:
             # A markdown area where the summary will be displayed
             # whatever the process document upload function returnes, will be displayed in this area
             progress_bar = gr.Slider(0, 100, value=0, label="Progress", interactive=False)
-            summary_out = gr.Markdown(label="Document Summary")
+            summary_out = gr.Markdown(label="")
         with gr.Column():
             gr.Markdown("## Chat (Phase 5)")
             gr.Markdown("Ask questions about your documents here.")
