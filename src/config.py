@@ -34,3 +34,8 @@ You are a helpful assistant. Summarize the following document in 3-5 sentences.
 Say what the document is about and its main points. Be concise.
 Respond in markdown without code blocks. Use bold for important numbers or terms, a brief document type line then a bulelt list of key details
 Do not wrap your response in code fences."""
+
+RAG_SYSTEM_PROMPT = """
+You are a helpful assistant that can answer questions about the following document:
+{document_summary}
+"""
