@@ -5,19 +5,53 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_core.messages import SystemMessage, HumanMessage
 from pathlib import Path
 
+def _get_client_model_response(system_content: str, question: str):
+    """
+    Return the response from the client model.
+    Use system message that includes the RAG retrieval context and the user question
+    """
+    # Create client model
+    client = ChatOpenAI(model=CHAT_MODEL, temperature=0)
+    messages = [
+        SystemMessage(content=system_content),
+        HumanMessage(content=question)
+    ]
+
+    # Send messages to client model and return the response
+    response = client.invoke(messages)
+    return response.content
 
 def answer_question(question: str = "") -> tuple[str, str]:
+    """
+    Answer a question using the RAG system.
+    Load the Chroma DB -> retrieve relevant documents to user question -> build system prompt message -> get model response
+    """
+    # Load existing Chroma DB
     chroma_db = _load_chroma_db()
+
+    # Check if there are any documents in the Chroma DB
     documents_amount = chroma_db._collection.count()
     if documents_amount == 0:
         return ("Upload and process a document first.", "")
 
+    # Load the retriever object from the Chroma DB
     retriever = _load_retriever(chroma_db)
+    # Get the documents found by the retriever
     documents = retriever.invoke(question)
-    for doc in documents:
-        print(doc.metadata)
+    
+    # Organize the documents into a single string with new lines between each document
+    context = ""
+    for i, doc in enumerate(documents):
+        context += f"Document {i+1}:\n{doc.page_content}\n\n"
 
-    return ("Not implemented", "")
+    # Build the system prompt message that includes the RAG retrieval context
+    system_content = RAG_SYSTEM_PROMPT.format(document_summary=context)
+
+    # Get model response using the system prompt message and the user question
+    model_response = _get_client_model_response(system_content, question)
+
+    return model_response
+
 
 def _load_chroma_db() -> Chroma:
     if Path(CHROMA_PERSIST_DIR).exists():
@@ -30,8 +64,3 @@ def _load_embedding_model():
 
 def _load_retriever(chroma_db: Chroma):
     return chroma_db.as_retriever(search_kwargs={"k": RETRIEVAL_K})
-
-answer_question(question="who is eran mani?")
-
-
-
