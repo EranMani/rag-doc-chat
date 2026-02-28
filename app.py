@@ -1,6 +1,7 @@
 import gradio as gr
 from pathlib import Path
 from ingestion import ingest_document_stream
+from query import answer_question
 import time
 
 def process_document_upload(file):
@@ -19,11 +20,18 @@ def process_document_upload(file):
     except Exception as e:
         yield 100, f"Error processing file: {e}"
 
-def answer_question(history, question):
-    if not question:
-        return (history, "")
+def get_model_answer(history, question):
+    if not (question or "").strip():
+        return history, ""
+
+    answer_text = answer_question(question=question)
+    sources_display = ""
+
     user_msg = {"role": "user", "content": [{"type": "text", "text": question}]}
-    assistant_msg = {"role": "assistant", "content": [{"type": "text", "text": "blabla"}]}
+    assistant_content = answer_text
+    if sources_display:
+        assistant_content += "\n\n---\n**Sources:**\n" + sources_display
+    assistant_msg = {"role": "assistant", "content": [{"type": "text", "text": assistant_content}]}
 
     new_history = history + [user_msg, assistant_msg]
     return new_history, ""
@@ -55,7 +63,7 @@ with gr.Blocks(title="RAG Doc Chat") as demo:
 
     # wires the process button to logic
     process_btn.click(fn=process_document_upload, inputs=file_input, outputs=[progress_bar, summary_out])
-    ask_btn.click(fn=answer_question, inputs=[chatbot, answer_textbox], outputs=[chatbot, answer_textbox])
+    ask_btn.click(fn=get_model_answer, inputs=[chatbot, answer_textbox], outputs=[chatbot, answer_textbox])
 
 demo.queue()
 demo.launch()
