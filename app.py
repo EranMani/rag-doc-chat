@@ -24,14 +24,12 @@ def get_model_answer(history, question):
     if not (question or "").strip():
         return history, ""
 
-    answer_text = answer_question(question=question)
-    sources_display = ""
+    answer_text, sources_display = answer_question(question=question)
 
     user_msg = {"role": "user", "content": [{"type": "text", "text": question}]}
     assistant_content = answer_text
-    if sources_display:
-        assistant_content += "\n\n---\n**Sources:**\n" + sources_display
-    assistant_msg = {"role": "assistant", "content": [{"type": "text", "text": assistant_content}]}
+
+    assistant_msg = {"role": "assistant", "content": [{"type": "text", "text": sources_display}]}
 
     new_history = history + [user_msg, assistant_msg]
     return new_history, ""
