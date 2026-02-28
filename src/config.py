@@ -25,7 +25,7 @@ CHUNK_OVERLAP = 100
 
 # Define constants for the document summary parameters
 SUMMARY_MODEL = "gpt-5-mini"
-RETRIEVAL_K = 30
+RETRIEVAL_K = 3
 SCORE_THRESHOLD = 0.75
 
 # Define the system prompt for the summary model
