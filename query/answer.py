@@ -26,6 +26,9 @@ def answer_question(question: str = "") -> tuple[str, str]:
     Answer a question using the RAG system.
     Load the Chroma DB -> retrieve relevant documents to user question -> build system prompt message -> get model response
     """
+
+    unique_sources_names = set()
+
     # Load existing Chroma DB
     chroma_db = _load_chroma_db()
 
@@ -43,6 +46,11 @@ def answer_question(question: str = "") -> tuple[str, str]:
     context = ""
     for i, doc in enumerate(documents):
         context += f"Document {i+1}:\n{doc.page_content}\n\n"
+        source_name = doc.metadata.get("source", "Unknown")
+        if source_name != "Unknown":
+            unique_sources_names.add(source_name)
+
+    sources_display = "\n\n---\n**Sources:**\n" + "\n".join(unique_sources_names)
 
     # Build the system prompt message that includes the RAG retrieval context
     system_content = RAG_SYSTEM_PROMPT.format(document_summary=context)
@@ -50,7 +58,7 @@ def answer_question(question: str = "") -> tuple[str, str]:
     # Get model response using the system prompt message and the user question
     model_response = _get_client_model_response(system_content, question)
 
-    return model_response
+    return model_response, sources_display
 
 
 def _load_chroma_db() -> Chroma:
