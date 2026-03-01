@@ -28,8 +28,9 @@ def get_model_answer(history, question):
 
     user_msg = {"role": "user", "content": [{"type": "text", "text": question}]}
     assistant_content = answer_text
-
-    assistant_msg = {"role": "assistant", "content": [{"type": "text", "text": sources_display}]}
+    if sources_display:
+        assistant_content += sources_display
+    assistant_msg = {"role": "assistant", "content": [{"type": "text", "text": assistant_content}]}
 
     new_history = history + [user_msg, assistant_msg]
     return new_history, ""
