@@ -38,6 +38,16 @@ def _split_document_to_chunks(filename: str, document):
 
     return chunk_document
 
+def _remove_existing_chunks(chroma_db, filename: str) -> None:
+    """
+    Remove existing chunks from ChromaDB for a given filename.
+    """
+
+    existing_chunks = chroma_db._collection.get(where={"source": filename})
+    if existing_chunks and existing_chunks["ids"]:
+        print(f"Found {len(existing_chunks)} existing chunks with source {existing_chunks['metadatas'][0]['source']} for file {filename}. Removing them...")
+        chroma_db._collection.delete(ids=existing_chunks["ids"])
+
 def _embed_and_store_chunks(document_chunks, filename: str):
     """
     Embed and store a list of document chunks in ChromaDB.
@@ -50,12 +60,8 @@ def _embed_and_store_chunks(document_chunks, filename: str):
         # Load existing Chroma DB
         chroma_db = Chroma(persist_directory=CHROMA_PERSIST_DIR, embedding_function=embeddings)
 
-        # NOTE: A chroma collection is the object that can be used to add/query/delete vectors and metadata
-        # 'where' is Chroma's way of saying 'filter by metadata' and then turns it into a proper SQL query
-        existing_chunks = chroma_db._collection.get(where={"source": filename})
-        if existing_chunks and existing_chunks["ids"]:
-            print(f"Found {len(existing_chunks)} existing chunks with source {existing_chunks['metadatas'][0]['source']} for file {filename}. Removing them...")
-            chroma_db._collection.delete(ids=existing_chunks["ids"])
+        # Remove existing chunks when uploading the same file again
+        _remove_existing_chunks(chroma_db, filename)
 
         # Add the generated chunks to the existing ChromaDB database
         chroma_db.add_documents(document_chunks)
