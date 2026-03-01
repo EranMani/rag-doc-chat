@@ -38,7 +38,7 @@ def _split_document_to_chunks(filename: str, document):
 
     return chunk_document
 
-def _embed_and_store_chunks(document_chunks):
+def _embed_and_store_chunks(document_chunks, filename: str):
     """
     Embed and store a list of document chunks in ChromaDB.
     """
@@ -50,10 +50,18 @@ def _embed_and_store_chunks(document_chunks):
         # Load existing Chroma DB
         chroma_db = Chroma(persist_directory=CHROMA_PERSIST_DIR, embedding_function=embeddings)
 
+        # NOTE: A chroma collection is the object that can be used to add/query/delete vectors and metadata
+        # 'where' is Chroma's way of saying 'filter by metadata' and then turns it into a proper SQL query
+        existing_chunks = chroma_db._collection.get(where={"source": filename})
+        if existing_chunks and existing_chunks["ids"]:
+            print(f"Found {len(existing_chunks)} existing chunks with source {existing_chunks['metadatas'][0]['source']} for file {filename}. Removing them...")
+            chroma_db._collection.delete(ids=existing_chunks["ids"])
+
         # Add the generated chunks to the existing ChromaDB database
         chroma_db.add_documents(document_chunks)
     else:
         # Add the generated chunks to a new ChromeDB database
+        # NOTE: chroma usually uses SQlite as the persistence layer
         chroma_db = Chroma.from_documents(documents=document_chunks, embedding=embeddings, persist_directory=CHROMA_PERSIST_DIR)
 
     print(f"Added {len(document_chunks)} chunks to ChromaDB")
@@ -81,7 +89,7 @@ def ingest_document(file_path=None, file_bytes=None, filename=None):
     document_chunks = _split_document_to_chunks(filename, document)
     
     # Embed and store the chunks in ChromaDB
-    _embed_and_store_chunks(document_chunks)
+    _embed_and_store_chunks(document_chunks, filename)
 
     # Generate a summary of the document based on its chunks
     summary_content = _build_chunks_content_for_summary(document_chunks)
@@ -103,7 +111,7 @@ def ingest_document_stream(file_path=None, file_bytes=None, filename=None):
     document_chunks = _split_document_to_chunks(filename, document)
     
     # Embed and store the chunks in ChromaDB
-    _embed_and_store_chunks(document_chunks)
+    _embed_and_store_chunks(document_chunks, filename)
 
     # Generate a summary of the document based on its chunks
     summary_content = _build_chunks_content_for_summary(document_chunks)
