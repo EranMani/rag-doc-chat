@@ -4,6 +4,7 @@ from langchain_openai import ChatOpenAI
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_core.messages import SystemMessage, HumanMessage
 from pathlib import Path
+from functools import lru_cache
 
 def _get_client_model_response(system_content: str, question: str):
     """
@@ -63,11 +64,22 @@ def answer_question(question: str = "") -> tuple[str, str]:
 
 def _load_chroma_db() -> Chroma:
     if Path(CHROMA_PERSIST_DIR).exists():
-        return Chroma(persist_directory=CHROMA_PERSIST_DIR, embedding_function=_load_embedding_model())
+        return Chroma(persist_directory=CHROMA_PERSIST_DIR, embedding_function=_get_embeddings())
     
     raise ValueError(f"Chroma DB not found at {CHROMA_PERSIST_DIR}")
 
-def _load_embedding_model():
+# NOTE: LRU = Least Recently Used. when the cache is full, it drops the least recently used entry
+# maxsize = maximum number of entries to cache.
+# No arguments -> one possible call -> cache once
+# With arguments that change, each distinct argument tuple is one cache entry. set maxsize to how many such entries you want to keep at most
+@lru_cache(maxsize=1)
+def _get_embeddings() -> HuggingFaceEmbeddings:
+    """
+    HuggingFaceEmbeddings loads a model from disk (weights, config) into memory
+    This function runs only once, then the return value is cached and reused instead of running this function again
+    The embedding model is stateless, so one instance can be reused
+    Use lru_cache to avoid repeated model loading.
+    """
     return HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
 
 def _load_retriever(chroma_db: Chroma):

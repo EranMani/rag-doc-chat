@@ -20,6 +20,7 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_chroma import Chroma
 from datetime import datetime
 from pathlib import Path
+from functools import lru_cache
 
 def _split_document_to_chunks(filename: str, document):
     """
@@ -48,13 +49,27 @@ def _remove_existing_chunks(chroma_db, filename: str) -> None:
         print(f"Found {len(existing_chunks)} existing chunks with source {existing_chunks['metadatas'][0]['source']} for file {filename}. Removing them...")
         chroma_db._collection.delete(ids=existing_chunks["ids"])
 
+# NOTE: LRU = Least Recently Used. when the cache is full, it drops the least recently used entry
+# maxsize = maximum number of entries to cache.
+# No arguments -> one possible call -> cache once
+# With arguments that change, each distinct argument tuple is one cache entry. set maxsize to how many such entries you want to keep at most
+@lru_cache(maxsize=1)
+def _get_embeddings() -> HuggingFaceEmbeddings:
+    """
+    HuggingFaceEmbeddings loads a model from disk (weights, config) into memory
+    This function runs only once, then the return value is cached and reused instead of running this function again
+    The embedding model is stateless, so one instance can be reused
+    Use lru_cache to avoid repeated model loading.
+    """
+    return HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
+
 def _embed_and_store_chunks(document_chunks, filename: str):
     """
     Embed and store a list of document chunks in ChromaDB.
     """
 
     # Use HuggingFaceEmbeddings to embed the document chunks
-    embeddings = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
+    embeddings = _get_embeddings()
 
     if Path(CHROMA_PERSIST_DIR).exists():
         # Load existing Chroma DB
