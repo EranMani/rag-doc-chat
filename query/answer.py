@@ -1,4 +1,4 @@
-from src.config import CHAT_MODEL, RAG_SYSTEM_PROMPT, CHROMA_PERSIST_DIR, EMBEDDING_MODEL, RETRIEVAL_K
+from src.config import CHAT_MODEL, RAG_SYSTEM_PROMPT, CHROMA_PERSIST_DIR, EMBEDDING_MODEL, RETRIEVAL_K, SCORE_THRESHOLD
 from langchain_chroma import Chroma
 from langchain_openai import ChatOpenAI
 from langchain_huggingface import HuggingFaceEmbeddings
@@ -71,4 +71,4 @@ def _load_embedding_model():
     return HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
 
 def _load_retriever(chroma_db: Chroma):
-    return chroma_db.as_retriever(search_kwargs={"k": RETRIEVAL_K})
+    return chroma_db.as_retriever(search_type="similarity_score_threshold", search_kwargs={"k": RETRIEVAL_K, "score_threshold": SCORE_THRESHOLD})
