@@ -40,3 +40,11 @@ You are a helpful assistant that can answer questions about the following docume
 {document_summary}
 If the question is not related to the document, say so.
 """
+
+MESSAGE_FORMAT_PROMPT = """
+Given the following conversation:{history_text}
+Rephrase this follow-up question as a single standalone question
+that can be understood without the conversation.
+Reply with only the standalone question, nothing else.
+Follow-up: {question}
+"""
