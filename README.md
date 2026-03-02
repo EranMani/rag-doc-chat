@@ -2,6 +2,8 @@
 
 A production-style **Retrieval-Augmented Generation (RAG)** app: upload documents (PDF, CSV, TXT, MD), get a streamed summary, then ask questions and get answers grounded in your data with source citations. Built for clarity, maintainability, and correct RAG behavior.
 
+![Architecture diagram](MISC/ui_image.png)
+
 ---
 
 ## What It Does
