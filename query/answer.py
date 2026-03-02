@@ -42,6 +42,13 @@ def answer_question(question: str = "") -> tuple[str, str]:
     retriever = _load_retriever(chroma_db)
     # Get the documents found by the retriever
     documents = retriever.invoke(question)
+
+    # When no documents are found, return a general response to the user. Avoid unnecessary api calls
+    if not documents:
+        return (
+            "I couldn't find relevant information in the uploaded documents to answer your question.",
+            ""
+        )
     
     # Organize the documents into a single string with new lines between each document
     context = ""
