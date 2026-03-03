@@ -16,6 +16,13 @@ from langchain_community.document_loaders import (
     TextLoader
 )
 
+_LOADER_MAP: dict[str, type] = {
+    ".pdf": PyPDFLoader,
+    ".csv": CSVLoader,
+    ".txt": TextLoader,
+    ".md": TextLoader,
+}
+
 # Supported extensions and their loader type for validation and metadata
 SUPPORTED_EXTENSIONS = {".pdf", ".csv", ".txt", ".md"}
 
@@ -82,16 +89,7 @@ def _get_extension(filename: str) -> str:
     return Path(filename).suffix.lower()
 
 def _get_loader(file_path: str, ext: str):
-    """Get the appropriate loader for the file extension"""
-    if ext == ".pdf":
-        return PyPDFLoader(file_path)
-    elif ext == ".csv":
-        return CSVLoader(file_path)
-    
-    elif ext == ".txt":
-        return TextLoader(file_path)
-    
-    elif ext == ".md":
-        return TextLoader(file_path)
-    else:
+    loader_cls = _LOADER_MAP.get(ext)
+    if loader_cls is None:
         raise ValueError(f"Unsupported file extension: {ext}")
+    return loader_cls(file_path)
