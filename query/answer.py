@@ -1,3 +1,4 @@
+from mpmath.calculus.optimization import str2solver
 from src.config import CHAT_MODEL, RAG_SYSTEM_PROMPT, CHROMA_PERSIST_DIR, EMBEDDING_MODEL, RETRIEVAL_K, SCORE_THRESHOLD, MESSAGE_FORMAT_PROMPT
 from langchain_chroma import Chroma
 from langchain_core.documents import Document
@@ -7,7 +8,7 @@ from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 from pathlib import Path
 from functools import lru_cache
 
-def _get_client_model_response(system_content: str, question: str, lines: list | None = None):
+def _get_client_model_response(system_content: str, question: str, lines: list | None = None) -> str:
     """
     Return the response from the client model.
     Use system message that includes the RAG retrieval context and the user question
@@ -26,7 +27,7 @@ def _get_client_model_response(system_content: str, question: str, lines: list |
     response = client.invoke(messages)
     return response.content
 
-def _reformulate_question(history: list, question: str):
+def _reformulate_question(history: list, question: str) -> tuple[str, list]:
     """
     Reformat the follow-up question to be a standalone question that can be understood without the conversation history.
     """
@@ -54,7 +55,7 @@ def _reformulate_question(history: list, question: str):
     response = client.invoke([HumanMessage(content=MESSAGE_FORMAT_PROMPT.format(history_text="\n".join(lines), question=question))])
     return response.content, lines
 
-def answer_question(username: str,question: str = "", history: list | None = None) -> tuple[str, str]:
+def answer_question(username: str, question: str = "", history: list | None = None) -> tuple[str, str]:
     """
     Answer a question using the RAG system.
     Load the Chroma DB -> retrieve relevant documents to user question -> build system prompt message -> get model response
@@ -69,8 +70,6 @@ def answer_question(username: str,question: str = "", history: list | None = Non
     documents_amount = chroma_db._collection.count()
     if documents_amount == 0:
         return ("Upload and process a document first.", "")
-
-    
 
     retrieval_question = question
     # Reformat the retrieval question to include the conversation history + current question
@@ -127,7 +126,7 @@ def _get_embeddings() -> HuggingFaceEmbeddings:
     """
     return HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
 
-def _retrieve_documents_based_on_score(username: str, chroma_db: Chroma, retrieval_question: str):
+def _retrieve_documents_based_on_score(username: str, chroma_db: Chroma, retrieval_question: str) -> list[Document]:
     # NOTE: Instead of using as_retriever based approach, which handles the search score automatically, use similarity_search_with_score directly on the chroma db
     # NOTE: Chroma uses L2 distance which is a metric. it measures how far apart two vectors are in space. Distance = 0 -> most similar. Distance = 1 -> least similar.
     # NOTE: L2 distance -> lowest score -> best match. Cosine similarity -> highest score -> best match.

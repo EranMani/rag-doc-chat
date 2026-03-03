@@ -8,8 +8,10 @@ from langchain_core.messages import SystemMessage, HumanMessage
 from src.config import (
     SUMMARY_MODEL, SUMMARY_SYSTEM_PROMPT
 )
+from langchain_core.documents import Document
+from typing import Generator
 
-def generate_summary(document_chunks):
+def generate_summary(document_chunks: list[Document]) -> str:
     """
     Generate a summary from a list of given document chunks.
     """
@@ -23,7 +25,7 @@ def generate_summary(document_chunks):
     response = client.invoke(messages)
     return response.content
 
-def generate_summary_stream(document_chunks: str):
+def generate_summary_stream(document_chunks: str) -> Generator[str, None, None]:
     """
     Stream the summary token-by-token; yields cumulative text so the UI can update as it arrives.
     """

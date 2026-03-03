@@ -9,6 +9,7 @@ It will create a short summary on amount of chunks and return it to the user
 load -> chunk -> embed & store -> summarize -> return summary
 """
 
+from gradio_client.documentation import document
 from .loaders import load_document
 from .summary import generate_summary, generate_summary_stream
 from src.config import (
@@ -20,8 +21,10 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from datetime import datetime
 from pathlib import Path
 from functools import lru_cache
+from langchain_core.documents import Document
+from typing import Generator
 
-def _split_document_to_chunks(username: str, filename: str, document):
+def _split_document_to_chunks(username: str, filename: str, document: list[Document]) -> list[Document]:
     """
     Chunk a list of langchain documents into smaller chunks.
     """
@@ -40,7 +43,7 @@ def _split_document_to_chunks(username: str, filename: str, document):
 
     return chunk_document
 
-def _remove_existing_chunks(chroma_db, filename: str) -> None:
+def _remove_existing_chunks(chroma_db: Chroma, filename: str) -> None:
     """
     Remove existing chunks from ChromaDB for a given filename.
     """
@@ -64,7 +67,7 @@ def _get_embeddings() -> HuggingFaceEmbeddings:
     """
     return HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
 
-def _embed_and_store_chunks(document_chunks, filename: str):
+def _embed_and_store_chunks(document_chunks: list[Document], filename: str) -> None:
     """
     Embed and store a list of document chunks in ChromaDB.
     """
@@ -95,7 +98,7 @@ def _embed_and_store_chunks(document_chunks, filename: str):
     #     print("--------------------------------")
 
     
-def _build_chunks_content_for_summary(document_chunks):
+def _build_chunks_content_for_summary(document_chunks: list[Document]) -> str:
     """
     Build the content of the document chunks for the summary.
     Use N amount of chunks to build the summary.
@@ -104,7 +107,7 @@ def _build_chunks_content_for_summary(document_chunks):
     excerpt = "\n\n".join(chunk.page_content for chunk in document_chunks[:5])
     return excerpt
 
-def ingest_document(username: str, file_path=None, file_bytes=None, filename=None):
+def ingest_document(username: str, file_path=None, file_bytes=None, filename=None) -> str:
     """
     Ingest a document into the RAG system.
     """
@@ -126,7 +129,7 @@ def ingest_document(username: str, file_path=None, file_bytes=None, filename=Non
 
     return summary
 
-def ingest_document_stream(username: str, file_path=None, file_bytes=None, filename=None):
+def ingest_document_stream(username: str, file_path=None, file_bytes=None, filename=None) -> Generator[tuple[int, str], None, None]:
     """ 
     Ingest a document into the RAG system and stream the summary.
     Yields (progress, summary_text) so the UI can show progress and updating markdown.
