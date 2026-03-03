@@ -4,7 +4,7 @@ from ingestion import ingest_document_stream
 from query import answer_question
 import time
 
-def process_document_upload(file):
+def process_document_upload(file, request: gr.Request):
     if file is None:
         return "Upload a file first"
 
@@ -13,18 +13,18 @@ def process_document_upload(file):
     filename = Path(path).name
     yield 10, "⏳ Loading and processing document..."
     try:
-        for progress, text in ingest_document_stream(file_path=path, filename=filename):
+        for progress, text in ingest_document_stream(username=request.username, file_path=path, filename=filename):
             yield progress, text
     except ValueError as e:
         yield 100, f"Invalid file format: {e}"
     except Exception as e:
         yield 100, f"Error processing file: {e}"
 
-def get_model_answer(history, question):
+def get_model_answer(history, question, request: gr.Request):
     if not (question or "").strip():
         return history, ""
 
-    answer_text, sources_display = answer_question(question=question)
+    answer_text, sources_display = answer_question(username=request.username, question=question)
 
     user_msg = {"role": "user", "content": [{"type": "text", "text": question}]}
     assistant_content = answer_text
@@ -65,4 +65,4 @@ with gr.Blocks(title="RAG Doc Chat") as demo:
     ask_btn.click(fn=get_model_answer, inputs=[chatbot, answer_textbox], outputs=[chatbot, answer_textbox])
 
 demo.queue()
-demo.launch()
+demo.launch(auth=[("admin", "admin"), ("user1", "user1"), ("eran", "eran")])

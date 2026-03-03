@@ -54,7 +54,7 @@ def _reformulate_question(history: list, question: str):
     response = client.invoke([HumanMessage(content=MESSAGE_FORMAT_PROMPT.format(history_text="\n".join(lines), question=question))])
     return response.content, lines
 
-def answer_question(question: str = "", history: list | None = None) -> tuple[str, str]:
+def answer_question(username: str,question: str = "", history: list | None = None) -> tuple[str, str]:
     """
     Answer a question using the RAG system.
     Load the Chroma DB -> retrieve relevant documents to user question -> build system prompt message -> get model response
@@ -79,7 +79,7 @@ def answer_question(question: str = "", history: list | None = None) -> tuple[st
     # print(lines)
 
     # Load the retriever object from the Chroma DB
-    retrieved_documents = _retrieve_documents_based_on_score(chroma_db, retrieval_question)
+    retrieved_documents = _retrieve_documents_based_on_score(username, chroma_db, retrieval_question)
         
     # When no documents are found, return a general response to the user. Avoid unnecessary api calls
     if not retrieved_documents:
@@ -127,7 +127,7 @@ def _get_embeddings() -> HuggingFaceEmbeddings:
     """
     return HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
 
-def _retrieve_documents_based_on_score(chroma_db: Chroma, retrieval_question: str):
+def _retrieve_documents_based_on_score(username: str, chroma_db: Chroma, retrieval_question: str):
     # NOTE: Instead of using as_retriever based approach, which handles the search score automatically, use similarity_search_with_score directly on the chroma db
     # NOTE: Chroma uses L2 distance which is a metric. it measures how far apart two vectors are in space. Distance = 0 -> most similar. Distance = 1 -> least similar.
     # NOTE: L2 distance -> lowest score -> best match. Cosine similarity -> highest score -> best match.
@@ -140,9 +140,11 @@ def _retrieve_documents_based_on_score(chroma_db: Chroma, retrieval_question: st
     # for doc, score in results:
     #     print(f"Score: {score:.4f} | {doc.page_content[:60]}...")
 
-    # Get the documents with score below the threshold
-    documents = [doc for doc, score in results if score <= SCORE_THRESHOLD]
-
+    # Get the documents with score below the threshold and from the same signed user
+    documents = [
+        doc for doc, score in results if score <= SCORE_THRESHOLD and doc.metadata.get("username") == username
+    ]
+    
     # Gather they passed documents into a list
     expanded_docs = list(documents)
 
@@ -152,8 +154,9 @@ def _retrieve_documents_based_on_score(chroma_db: Chroma, retrieval_question: st
         if not source:
             continue
         
-        # Fetch the chunks using source as query
-        all_chunks = chroma_db.get(where={"source": source}, include=["documents", "metadatas"])
+        # Fetch the chunks using source and user name filters as query
+        all_chunks = chroma_db._collection.get(where={"$and": [{"source": source}, {"username": username}]}, include=["documents", "metadatas"])
+
         # Get content and metadata for each chunk
         for content, meta in zip(all_chunks["documents"], all_chunks["metadatas"]):
             # Append chunk only if its source is the same as the document parent name

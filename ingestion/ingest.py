@@ -22,7 +22,7 @@ from datetime import datetime
 from pathlib import Path
 from functools import lru_cache
 
-def _split_document_to_chunks(filename: str, document):
+def _split_document_to_chunks(username: str, filename: str, document):
     """
     Chunk a list of langchain documents into smaller chunks.
     """
@@ -33,6 +33,8 @@ def _split_document_to_chunks(filename: str, document):
 
     print(f"Chunked {len(chunk_document)} documents")
     for chunk in chunk_document:
+        # Add the username so only this signed user can access this document and its chunks
+        chunk.metadata["username"] = username
         chunk.metadata["embedding_model"] = EMBEDDING_MODEL
         chunk.metadata["parent_document"] = filename
         chunk.metadata["date"] = datetime.now().strftime("%Y-%m-%d")
@@ -103,17 +105,17 @@ def _build_chunks_content_for_summary(document_chunks):
     excerpt = "\n\n".join(chunk.page_content for chunk in document_chunks[:5])
     return excerpt
 
-def ingest_document(file_path=None, file_bytes=None, filename=None):
+def ingest_document(username: str, file_path=None, file_bytes=None, filename=None):
     """
     Ingest a document into the RAG system.
     """
 
     # Turn user document into a list of langchain documents
-    document = load_document(file_path=file_path, file_bytes=file_bytes, filename=filename)
+    document = load_document(username=username, file_path=file_path, file_bytes=file_bytes, filename=filename)
     print(f"Loaded {len(document)} documents")
 
     # Chunk the document into smaller chunks
-    document_chunks = _split_document_to_chunks(filename, document)
+    document_chunks = _split_document_to_chunks(username, filename, document)
     
     # Embed and store the chunks in ChromaDB
     _embed_and_store_chunks(document_chunks, filename)
@@ -125,17 +127,17 @@ def ingest_document(file_path=None, file_bytes=None, filename=None):
 
     return summary
 
-def ingest_document_stream(file_path=None, file_bytes=None, filename=None):
+def ingest_document_stream(username: str, file_path=None, file_bytes=None, filename=None):
     """ 
     Ingest a document into the RAG system and stream the summary.
     Yields (progress, summary_text) so the UI can show progress and updating markdown.
     """
     # Turn user document into a list of langchain documents
-    document = load_document(file_path=file_path, file_bytes=file_bytes, filename=filename)
+    document = load_document(username=username, file_path=file_path, file_bytes=file_bytes, filename=filename)
     print(f"Loaded {len(document)} documents")
 
     # Chunk the document into smaller chunks
-    document_chunks = _split_document_to_chunks(filename, document)
+    document_chunks = _split_document_to_chunks(username, filename, document)
     
     # Embed and store the chunks in ChromaDB
     _embed_and_store_chunks(document_chunks, filename)

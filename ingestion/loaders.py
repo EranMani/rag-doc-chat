@@ -19,7 +19,7 @@ from langchain_community.document_loaders import (
 # Supported extensions and their loader type for validation and metadata
 SUPPORTED_EXTENSIONS = {".pdf", ".csv", ".txt", ".md"}
 
-def load_document(*, file_path: str | None = None, file_bytes: bytes | None = None, filename: str) -> list[Document]:
+def load_document(*, username: str = "admin", file_path: str | None = None, file_bytes: bytes | None = None, filename: str) -> list[Document]:
     """
     Load one document into a list of LangChain Documents.
 
@@ -65,6 +65,8 @@ def load_document(*, file_path: str | None = None, file_bytes: bytes | None = No
         for doc in raw_docs:
             doc.metadata["source"] = filename
             doc.metadata["type"] = doc_type
+            # Add the username so only this signed user can access this document and its chunks
+            doc.metadata["username"] = username
 
         return raw_docs
     except Exception as e:
