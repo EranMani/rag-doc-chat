@@ -87,6 +87,12 @@ def _embed_and_store_chunks(document_chunks, filename: str):
 
     print(f"Added {len(document_chunks)} chunks to ChromaDB")
 
+    # DEBUGGING: print the chunks content from the uploaded documents
+    # for doc in document_chunks:
+    #     print(f"Chunk: {doc.page_content[:60]}...")
+    #     print(f"Metadata: {doc.metadata}")
+    #     print("--------------------------------")
+
     
 def _build_chunks_content_for_summary(document_chunks):
     """
