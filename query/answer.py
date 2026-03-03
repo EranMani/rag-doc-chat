@@ -7,6 +7,14 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 from pathlib import Path
 from functools import lru_cache
+from dataclasses import dataclass
+
+# Why use dataclass? it makes the return value self-documenting and easier to understand
+@dataclass(frozen=True)
+class AnswerResult:
+    answer: str
+    sources: str
+
 
 def _get_client_model_response(system_content: str, question: str, lines: list | None = None) -> str:
     """
@@ -103,7 +111,7 @@ def answer_question(username: str, question: str = "", history: list | None = No
     # Get model response using the system prompt message and the user question
     model_response = _get_client_model_response(system_content, question, lines)
 
-    return model_response, sources_display
+    return AnswerResult(answer=model_response, sources=sources_display)
 
 
 def _load_chroma_db() -> Chroma:

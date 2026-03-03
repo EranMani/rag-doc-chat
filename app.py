@@ -24,12 +24,12 @@ def get_model_answer(history, question, request: gr.Request):
     if not (question or "").strip():
         return history, ""
 
-    answer_text, sources_display = answer_question(username=request.username, question=question)
+    result = answer_question(username=request.username, question=question)
 
     user_msg = {"role": "user", "content": [{"type": "text", "text": question}]}
-    assistant_content = answer_text
-    if sources_display:
-        assistant_content += sources_display
+    assistant_content = result.answer
+    if result.sources:
+        assistant_content += result.sources
     assistant_msg = {"role": "assistant", "content": [{"type": "text", "text": assistant_content}]}
 
     new_history = history + [user_msg, assistant_msg]
