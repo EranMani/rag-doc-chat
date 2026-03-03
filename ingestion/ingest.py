@@ -17,7 +17,6 @@ from src.config import (
 from langchain_chroma import Chroma
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_chroma import Chroma
 from datetime import datetime
 from pathlib import Path
 from functools import lru_cache
