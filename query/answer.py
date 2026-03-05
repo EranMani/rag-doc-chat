@@ -92,7 +92,7 @@ def answer_question(username: str, question: str = "", history: list | None = No
     # Check if there are any documents in the Chroma DB
     documents_amount = chroma_db._collection.count()
     if documents_amount == 0:
-        return ("Upload and process a document first.", "")
+        return AnswerResult(answer="Upload and process a document first.", sources="")
 
     retrieval_question = question
     # Reformat the retrieval question to include the conversation history + current question
@@ -105,10 +105,7 @@ def answer_question(username: str, question: str = "", history: list | None = No
         
     # When no documents are found, return a general response to the user. Avoid unnecessary api calls
     if not retrieved_documents:
-        return (
-            "I couldn't find relevant information in the uploaded documents to answer your question.",
-            ""
-        )
+        return AnswerResult(answer="I couldn't find relevant information in the uploaded documents to answer your question.", sources="")
 
     # Organize the documents into a single string with new lines between each document
     unique_sources_names = {doc.metadata["source"] for doc in retrieved_documents if doc.metadata.get("source") not in ("Unknown", None)}
