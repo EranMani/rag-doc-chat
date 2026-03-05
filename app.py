@@ -2,7 +2,9 @@ import gradio as gr
 from pathlib import Path
 from ingestion import ingest_document_stream
 from query import answer_question
-import time
+from src.logger import get_logger
+
+logger = get_logger(__name__)
 
 def process_document_upload(file, request: gr.Request):
     if file is None:
@@ -11,26 +13,36 @@ def process_document_upload(file, request: gr.Request):
     # Make sure the file from gradio come as a string. if not, get the first element of the list.
     path = file if isinstance(file, str) else file[0]
     filename = Path(path).name
+
+    logger.info(f"Processing document upload for user {request.username} with file --{filename}--")
+
     yield 10, "⏳ Loading and processing document..."
     try:
         for progress, text in ingest_document_stream(username=request.username, file_path=path, filename=filename):
             yield progress, text
+
+        logger.info(f"Document upload complete for user {request.username} with file --{filename}--")
     except ValueError as e:
         yield 100, f"Invalid file format: {e}"
+        logger.error(f"Invalid file format: {e} for user {request.username} with file --{filename}--")
     except Exception as e:
         yield 100, f"Error processing file: {e}"
+        logger.error(f"Error processing file: {e} for user {request.username} with file --{filename}--")
 
 def get_model_answer(history, question, request: gr.Request):
     if not (question or "").strip():
+        logger.warning(f"No question provided for user {request.username}")
         return history, ""
 
     result = answer_question(username=request.username, question=question)
-
+    
     user_msg = {"role": "user", "content": [{"type": "text", "text": question}]}
     assistant_content = result.answer
     if result.sources:
         assistant_content += result.sources
     assistant_msg = {"role": "assistant", "content": [{"type": "text", "text": assistant_content}]}
+
+    logger.info(f"Answer generated for user {request.username} with question --{question}-- and answer --{assistant_content}--")
 
     new_history = history + [user_msg, assistant_msg]
     return new_history, ""
