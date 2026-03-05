@@ -94,18 +94,13 @@ def answer_question(username: str, question: str = "", history: list | None = No
             "I couldn't find relevant information in the uploaded documents to answer your question.",
             ""
         )
-    
-    # Organize the documents into a single string with new lines between each document
-    context = ""
-    for i, doc in enumerate(retrieved_documents):
-        context += f"Document {i+1}:\n{doc.page_content}\n\n"
-        source_name = doc.metadata.get("source", "Unknown")
-        if source_name != "Unknown":
-            unique_sources_names.add(source_name)
 
+    # Organize the documents into a single string with new lines between each document
+    unique_sources_names = {doc.metadata["source"] for doc in retrieved_documents if doc.metadata.get("source") not in ("Unknown", None)}
     sources_display = "\n\n---\n**Sources:**\n" + "\n".join(unique_sources_names)
 
     # Build the system prompt message that includes the RAG retrieval context
+    context = "\n\n".join(f"Document {i+1}:\n{doc.page_content}"for i, doc in enumerate(retrieved_documents))
     system_content = RAG_SYSTEM_PROMPT.format(document_summary=context)
 
     # Get model response using the system prompt message and the user question
