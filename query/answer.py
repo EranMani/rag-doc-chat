@@ -1,10 +1,11 @@
+from email import message
 from mpmath.calculus.optimization import str2solver
 from src.config import CHAT_MODEL, RAG_SYSTEM_PROMPT, CHROMA_PERSIST_DIR, EMBEDDING_MODEL, RETRIEVAL_K, SCORE_THRESHOLD, MESSAGE_FORMAT_PROMPT
 from langchain_chroma import Chroma
 from langchain_core.documents import Document
 from langchain_openai import ChatOpenAI
 from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, BaseMessage
 from pathlib import Path
 from functools import lru_cache
 from dataclasses import dataclass
@@ -14,6 +15,23 @@ from dataclasses import dataclass
 class AnswerResult:
     answer: str
     sources: str
+
+
+def _history_to_langchain_messages(history: list[dict]) -> list[BaseMessage]:
+    """Convert gradio chatbot history into langchain message objects"""
+    # NOTE: example for message in history
+    # {'role': 'user', 'metadata': None, 'content': [{'text': 'who is eran mani', 'type': 'text'}], 'options': None}
+    messages = []
+    for msg in history:
+        text = (msg.get("content") or [{}])[0].get("text", "")
+        if not text:
+            continue
+
+        if msg.get("role") == "user":
+            messages.append(HumanMessage(content=text))
+        else:
+            messages.append(AIMessage(content=text))
+    return messages
 
 
 def _get_client_model_response(system_content: str, question: str, lines: list | None = None) -> str:
@@ -44,24 +62,21 @@ def _reformulate_question(history: list, question: str) -> tuple[str, list]:
     if not history:
         return question, []
 
-    # NOTE: example for message in history
-    # {'role': 'user', 'metadata': None, 'content': [{'text': 'who is eran mani', 'type': 'text'}], 'options': None}
+    messages = _history_to_langchain_messages(history)
 
-    # Build conversation text from gradio history format
-    lines = []
-    for msg in history:
-        role = msg.get("role", "").capitalize()
-        content = msg.get("content", [])
-        text = content[0].get("text", "") if content else ""
-        if text:
-            # Append the generated role and message content to the lines list
-            lines.append(f"{role}: {text}")
+    # Build the string for the reformulation prompt from message objects
+    history_text = "\n".join(
+        f"{"User" if isinstance(m, HumanMessage) else "Assistant"}: {m.content}" for m in messages
+    )
+
+    # Build the prompt
+    prompt = MESSAGE_FORMAT_PROMPT.format(history_text=history_text, question=question)
 
     # Call the model with the history as context and the original question
     client = ChatOpenAI(model=CHAT_MODEL, temperature=0)
     # No system message is needed because the prompt is designed to handle the conversation history
-    response = client.invoke([HumanMessage(content=MESSAGE_FORMAT_PROMPT.format(history_text="\n".join(lines), question=question))])
-    return response.content, lines
+    response = client.invoke([HumanMessage(content=prompt)])
+    return response.content, history_text
 
 def answer_question(username: str, question: str = "", history: list | None = None) -> tuple[str, str]:
     """
