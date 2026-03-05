@@ -147,6 +147,8 @@ def _retrieve_documents_based_on_score(username: str, chroma_db: Chroma, retriev
         doc for doc, score in results if score <= SCORE_THRESHOLD and doc.metadata.get("username") == username
     ]
     
+    # Track already seen chunks to avoid duplicates
+    seen_content: set[str] = {d.page_content for d in documents}
     # Gather they passed documents into a list
     expanded_docs = list(documents)
 
@@ -161,10 +163,10 @@ def _retrieve_documents_based_on_score(username: str, chroma_db: Chroma, retriev
 
         # Get content and metadata for each chunk
         for content, meta in zip(all_chunks["documents"], all_chunks["metadatas"]):
-            # Append chunk only if its source is the same as the document parent name
-            if meta.get("source") == source:
-                if content not in {d.page_content for d in expanded_docs}:
-                    # Add the new chunks content to the existing expanded docs list
-                    expanded_docs.append(Document(page_content=content, metadata=meta))
+            # Append chunk only if its source is the same as the document parent name and it hasn't been seen yet
+            if meta.get("source") == source and content not in seen_content:
+                # Add the new chunks content to the existing expanded docs list
+                expanded_docs.append(Document(page_content=content, metadata=meta))
+                seen_content.add(content)
     
     return expanded_docs
